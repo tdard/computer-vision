@@ -2,9 +2,11 @@ import os
 from termcolor import colored
 from xml.etree import ElementTree as ET
 from PIL import Image, ImageDraw, ImageFont
+from random import choice
 
 
 class Logger:
+    colors = ["grey", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
     def __init__(self, color):
         self.color = color
         
@@ -16,7 +18,9 @@ class Logger:
         print(value)
 
     @classmethod
-    def set_color(cls, text, color):
+    def set_color(cls, text, color="blue", random=False):
+        if random:
+            color = choice(Logger.colors)
         res = colored(text, color)
         return res
 
@@ -59,7 +63,7 @@ def draw_bndbox(base, seq):
     d.rectangle((xmin, ymin, xmax, ymax), fill=None, outline="red", width=2)
     
     # Get a font
-    font = ImageFont.truetype("arial.ttf", size=15)
+    font = ImageFont.truetype("arial.ttf", size=20)
     # Create text
     d.text((xmin, ymin), name, font=font, fill=(255, 255, 255, 255))
     # Merge base with the rectangle
@@ -74,5 +78,5 @@ def annotate_image(image, annotation):
     base = Image.open(image).convert("RGBA")
     for seq in desc:
         base = draw_bndbox(base, seq)
-    return base
+    return base, desc
 

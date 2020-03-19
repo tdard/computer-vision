@@ -3,7 +3,6 @@ from argparse import ArgumentParser
 import os
 from utils import Logger, annotate_image
 import matplotlib.pyplot as plt
-#from PIL import Image
 
 # Defaults
 cwd = os.getcwd()
@@ -56,8 +55,11 @@ annotations = list(map(lambda x: os.path.join(args.annotations_path, "{}.xml".fo
 logger.log("One example of complete annotation path:", annotations[0])
 
 
-for img, annotation in list(zip(images, annotations)):  
-    im = annotate_image(img, annotation)
+for img, annotation, target in list(zip(images, annotations, targets)):  
+    im, desc = annotate_image(img, annotation)
+    print(Logger.set_color("= {} =".format(target.strip()), "yellow"))
+    for seq in desc:
+        print(" ".join(list(map(lambda x: str(x), seq))))
     plt.imshow(im)
     plt.show()
 
