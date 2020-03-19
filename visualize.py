@@ -1,9 +1,9 @@
 import sys
 from argparse import ArgumentParser
 import os
-from PIL import Image
-from utils import Logger
-
+from utils import Logger, annotate_image
+import matplotlib.pyplot as plt
+#from PIL import Image
 
 # Defaults
 cwd = os.getcwd()
@@ -46,13 +46,19 @@ with open(args.image_names, "r") as file:
     targets = file.readlines()
 logger.log("Target images number:", len(targets))
 
+# Create full path to images
 images = list(map(lambda x: os.path.join(args.images_path, "{}.jpg".format(x.strip())), targets))
 logger.log("One example of complete image path:", images[0])
 
-for path in images:
-    img = Image.open(path, mode="r")
-    img.show()
-    img.close()
-    if input(Logger.set_color("Press 'q' to quit\n", "red")) == "q":
-        print("Stop image visualization")
-        break
+
+# Create full path to annotations
+annotations = list(map(lambda x: os.path.join(args.annotations_path, "{}.xml".format(x.strip())), targets))
+logger.log("One example of complete annotation path:", annotations[0])
+
+
+for img, annotation in list(zip(images, annotations)):  
+    im = annotate_image(img, annotation)
+    plt.imshow(im)
+    plt.show()
+
+
