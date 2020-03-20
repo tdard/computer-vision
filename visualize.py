@@ -2,32 +2,26 @@ import sys
 from argparse import ArgumentParser
 import os
 from utils import Logger, annotate_image, PascalVOCExtractor
+from config import Defaults
 import matplotlib.pyplot as plt
 
 # Defaults
-cwd = os.getcwd()
-# XML Folder containing annotations (detection / classification)
-annotations_path = os.path.join(cwd, r"data\VOCtrainval_11-May-2012\VOCdevkit\VOC2012\Annotations")
-# Image Folder containing... images! (jpg for pascal voc)
-images_path = os.path.join(cwd, r"data\VOCtrainval_11-May-2012\VOCdevkit\VOC2012\JPEGImages")
-# File containing the name of the images to visualize
-image_names = os.path.join(cwd, r"data\VOCtrainval_11-May-2012\VOCdevkit\VOC2012\ImageSets\Main\trainval.txt")
-
+opts = Defaults()
 
 parser = ArgumentParser()
 parser.add_argument(
     "--annotations_path", # double dash enables the default value
-    default=annotations_path,
+    default=opts.ANNOTATIONS_PATH,
     help="Path to the folder containing Pascal-VOC like XML annotations"
 )
 parser.add_argument(
     "--images_path",
-    default=images_path,
+    default=opts.IMAGES_PATH,
     help="Path to the folder containing JPEG images"
 )
 parser.add_argument(
     "--image_names",
-    default=image_names,
+    default=opts.IMAGES_NAMES,
     help="Path to the file containing the name of the images and annotations we want to visualize"
 )
 

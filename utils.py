@@ -99,6 +99,8 @@ class PascalVOCExtractor(object):
         return images, annotations
 
 
+#class AnnotationProcessor(object):
+
 
 def draw_bndbox(base, seq):
     name, xmin, xmax, ymin, ymax = seq
