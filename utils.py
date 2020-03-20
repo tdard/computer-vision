@@ -56,7 +56,7 @@ class AnnotationParser(object):
         res = []
         for obj in root.iter("object"):
             name = obj.find("name").text
-            res.append([name])
+            res.append(name)
         return res
 
     @classmethod

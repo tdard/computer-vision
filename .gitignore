@@ -55,3 +55,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Saved numpy array
+*.npy
+*.npz
