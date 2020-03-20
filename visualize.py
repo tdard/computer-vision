@@ -51,5 +51,3 @@ for img, annotation, name in list(zip(images, annotations, names)):
         print(" ".join(list(map(lambda x: str(x), seq))))
     plt.imshow(im)
     plt.show()
-
-

@@ -3,6 +3,8 @@ from termcolor import colored
 from xml.etree import ElementTree as ET
 from PIL import Image, ImageDraw, ImageFont
 from random import choice
+import numpy as np
+from progressbar import ProgressBar
 
 
 class Logger(object):
@@ -99,7 +101,62 @@ class PascalVOCExtractor(object):
         return images, annotations
 
 
-#class AnnotationProcessor(object):
+class IOProcessor(object):
+    
+    tasks = ("classification", "detection", "segmentation")
+
+    @classmethod
+    def process(cls, im_paths, ann_paths, input_size, task, classes):
+        if task not in cls.tasks:
+            raise ValueError("The task you provided: '{}' is unknown".format(task))
+        
+        if task == 'classification':
+            x, y = cls.__process_for_classification(im_paths, ann_paths, input_size, classes)
+        elif task == 'detection':
+            x, y = cls.__process_for_detection(im_paths, ann_paths, input_size, classes)
+        else:
+            x, y = cls.__process_for_segmentation(im_paths, ann_paths, input_size, classes)
+        return x, y
+    
+    @classmethod
+    def __process_for_classification(cls, im_paths, ann_paths, input_size, classes):
+        n = len(im_paths)
+        m = len(classes)
+        pbar = ProgressBar()
+        # Create image and annotations array 
+        im_array = np.zeros((n, input_size, input_size, 3), dtype="float16") 
+        desc_array = np.zeros((n, m), dtype="int8")
+        for k in pbar(range(n)):
+            # Image processing
+            im = Image.open(im_paths[k])
+            w, h = im.size
+            # Reshape if necessary
+            if max(im.size) > input_size:
+                ratio = max(im.size)/input_size
+                w = int(w / ratio)
+                h = int(h / ratio)
+                im = im.resize(size=(w, h), resample=Image.BICUBIC)
+            assert max(im.size) <= input_size
+            # Cast PIL image in numpy array and normalize features between [0,1]
+            im = np.asarray(im)/255 # converts also w,h,c -> h,w,c
+            # Bottom and right zero-padding
+            im_array[k, :h, :w, :] = im
+            
+            # Annotations processing
+            desc = AnnotationParser().parse(ann_paths[k], "classification")
+            col = np.zeros((1, m))
+            for c in desc:
+                col[:, classes[c]-1] = 1
+            desc_array[k, :] = col
+        return im_array, desc_array
+
+    @classmethod
+    def __process_for_detection(cls, im_paths, ann_paths, input_size, classes):
+        return None, None
+
+    @classmethod
+    def __process_for_segmentation(cls, im_paths, ann_paths, input_size, classes):
+        return None, None
 
 
 def draw_bndbox(base, seq):
