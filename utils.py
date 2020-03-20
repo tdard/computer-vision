@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 from random import choice
 
 
-class Logger:
+class Logger(object):
     colors = ["grey", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
     def __init__(self, color):
         self.color = color
@@ -29,29 +29,56 @@ class Logger:
         os.system('color')
         print(colored("Colors enabled", "green"))
 
-def parse_xml_classification(file):
-    tree = ET.parse(file)
-    root = tree.getroot()
-    res = []
-    for obj in root.iter("object"):
-        name = obj.find("name").text
-        res.append([name])
-    return res
+class AnnotationParser(object):
+    
+    tasks = ("classification", "detection", "segmentation")
 
-def parse_xml_detection(file):
-    tree = ET.parse(file)
-    root = tree.getroot()
-    res = []
-    for obj in root.iter("object"):
-        name = obj.find("name").text
+    @classmethod
+    def parse(cls, file, task):
+        """
+        File is a correct XML path to be opened and task a string corresponding to either classification, detection or segmentation.
+        """
+        if task not in cls.tasks:
+            raise ValueError("The task you provided: '{}' is unknown".format(task))
         
-        bndbox = obj.find("bndbox")
-        xmin = int(bndbox.find("xmin").text)
-        xmax = int(bndbox.find("xmax").text)
-        ymin = int(bndbox.find("ymin").text)
-        ymax = int(bndbox.find("ymax").text)
-        res.append([name, xmin, xmax, ymin, ymax])
-    return res
+        if task == 'classification':
+            res = cls.__parse_for_classification(file)
+        elif task == 'detection':
+            res = cls.__parse_for_detection(file)
+        else:
+            res = cls.__parse_for_segmentation(file)
+        return res
+
+    @classmethod
+    def __parse_for_classification(cls, file):
+        tree = ET.parse(file)
+        root = tree.getroot()
+        res = []
+        for obj in root.iter("object"):
+            name = obj.find("name").text
+            res.append([name])
+        return res
+
+    @classmethod
+    def __parse_for_detection(cls, file):
+        tree = ET.parse(file)
+        root = tree.getroot()
+        res = []
+        for obj in root.iter("object"):
+            name = obj.find("name").text
+            
+            bndbox = obj.find("bndbox")
+            xmin = int(bndbox.find("xmin").text)
+            xmax = int(bndbox.find("xmax").text)
+            ymin = int(bndbox.find("ymin").text)
+            ymax = int(bndbox.find("ymax").text)
+            res.append([name, xmin, xmax, ymin, ymax])
+        return res
+
+    @classmethod
+    def __parse_for_segmentation(cls, file):
+        return []
+        
 
 def draw_bndbox(base, seq):
     name, xmin, xmax, ymin, ymax = seq
@@ -74,9 +101,8 @@ def annotate_image(image, annotation):
     """
     For a given image path and a given annotation path, annotate the image and returns the modified version
     """
-    desc = parse_xml_detection(annotation)
+    desc = AnnotationParser().parse(file=annotation, task="detection")
     base = Image.open(image).convert("RGBA")
     for seq in desc:
         base = draw_bndbox(base, seq)
     return base, desc
-
