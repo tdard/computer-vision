@@ -1,7 +1,7 @@
 import sys
 from argparse import ArgumentParser
 import os
-from utils import Logger, annotate_image
+from utils import Logger, annotate_image, PascalVOCExtractor
 import matplotlib.pyplot as plt
 
 # Defaults
@@ -40,25 +40,19 @@ logger.log("Images path:", args.images_path)
 logger.log("Image names:", args.image_names)
 
 
-# Retrieve targetted image names:
-with open(args.image_names, "r") as file:
-    targets = file.readlines()
-    targets = list(map(lambda x: x.strip(), targets))
-logger.log("Target images number:", len(targets))
+# Extract name of the images 
+names = PascalVOCExtractor().extract_names(args.image_names)
+logger.log("Target images number:", len(names))
 
-# Create full path to images
-images = list(map(lambda x: os.path.join(args.images_path, "{}.jpg".format(x)), targets))
+# Extract the full path of the images and of the annotations
+images, annotations = PascalVOCExtractor().extract_paths(args.images_path, args.annotations_path, names)
 logger.log("One example of complete image path:", images[0])
-
-
-# Create full path to annotations
-annotations = list(map(lambda x: os.path.join(args.annotations_path, "{}.xml".format(x)), targets))
 logger.log("One example of complete annotation path:", annotations[0])
 
 
-for img, annotation, target in list(zip(images, annotations, targets)):  
+for img, annotation, name in list(zip(images, annotations, names)):  
     im, desc = annotate_image(img, annotation)
-    print(Logger.set_color("= {} =".format(target), "yellow"))
+    print(Logger.set_color("= {} =".format(name), "yellow"))
     for seq in desc:
         print(" ".join(list(map(lambda x: str(x), seq))))
     plt.imshow(im)

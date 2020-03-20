@@ -78,7 +78,27 @@ class AnnotationParser(object):
     @classmethod
     def __parse_for_segmentation(cls, file):
         return []
-        
+
+
+class PascalVOCExtractor(object):
+    @classmethod
+    def extract_names(cls, image_names):
+        # Retrieve targetted image names
+        with open(image_names, "r") as file:
+            names = file.readlines()
+            names = list(map(lambda x: x.strip(), names))
+        return names
+
+    @classmethod
+    def extract_paths(cls, images_path, annotations_path, names): 
+        # Create full path to images
+        images = list(map(lambda x: os.path.join(images_path, "{}.jpg".format(x)), names))
+
+        # Create full path to annotations
+        annotations = list(map(lambda x: os.path.join(annotations_path, "{}.xml".format(x)), names))
+        return images, annotations
+
+
 
 def draw_bndbox(base, seq):
     name, xmin, xmax, ymin, ymax = seq
@@ -106,3 +126,5 @@ def annotate_image(image, annotation):
     for seq in desc:
         base = draw_bndbox(base, seq)
     return base, desc
+
+    
