@@ -38,6 +38,10 @@ parser.add_argument(
 args = parser.parse_args()
 logger = Logger("blue")
 
+# Create output directory
+os.makedirs(args.outputs_path, exist_ok=True)
+
+# Load data
 images, descriptions = load_data(args.inputs_path, args.images_array, args.descriptions_array)
 
 input_shape = images.shape[1:] # e.g. 416x416x3
@@ -46,8 +50,10 @@ num_classes = descriptions.shape[-1] # e.g. 20
 logger.log("Input shape:", input_shape)
 logger.log("Number of classes:", num_classes)
 
+# Split into training and validation sets
 X_train, X_val, y_train, y_val = train_test_split(images, descriptions, test_size=0.33, random_state=42)
 
+# Create model and compile it for training
 model = create_logistic_model(
     input_shape, 
     num_classes
@@ -59,6 +65,7 @@ model.compile(
 )
 print(model.summary())
 
+# Handle TensorBoard callbacks (logs)
 os.makedirs("logs/fit/", exist_ok=True)
 log_dir = "logs\\fit\\" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -67,6 +74,7 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(
     histogram_freq=1
 )
 
+# Run training
 model.fit(
     x=X_train,
     y=y_train,
