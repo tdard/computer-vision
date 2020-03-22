@@ -59,3 +59,11 @@ target/
 # Saved numpy array
 *.npy
 *.npz
+
+# Images
+*.jpg
+*.png
+
+# Saved models
+*.json
+*.h5

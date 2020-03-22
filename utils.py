@@ -186,4 +186,7 @@ def annotate_image(image, annotation):
         base = draw_bndbox(base, seq)
     return base, desc
 
-    
+def load_data(inputs_path, im, desc):
+    images = np.load(os.path.join(inputs_path, im))
+    descriptions = np.load(os.path.join(inputs_path, desc))
+    return (images, descriptions)
