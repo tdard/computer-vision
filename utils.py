@@ -2,9 +2,11 @@ import os
 from termcolor import colored
 from xml.etree import ElementTree as ET
 from PIL import Image, ImageDraw, ImageFont
+import matplotlib.pyplot as plt
 from random import choice
 import numpy as np
 from progressbar import ProgressBar
+from tensorflow.keras.models import model_from_json
 
 
 class Logger(object):
@@ -18,6 +20,12 @@ class Logger(object):
         """
         print(colored(text=key, color=self.color))
         print(value)
+
+    def alert(self, text):
+        print(colored(text=text, color="red"))
+
+    def success(self, text):
+        print(colored(text=text, color="green"))
 
     @classmethod
     def set_color(cls, text, color="blue", random=False):
@@ -119,6 +127,20 @@ class IOProcessor(object):
         return x, y
     
     @classmethod
+    def __process_image(cls, im_path, input_size):
+        im = Image.open(im_path)
+        w, h = im.size
+        if max(im.size) > input_size:
+                ratio = max(im.size)/input_size
+                w = int(w / ratio)
+                h = int(h / ratio)
+                im = im.resize(size=(w, h), resample=Image.BICUBIC)
+        assert max(im.size) <= input_size
+        # Cast PIL image in numpy array and normalize features between [0,1]
+        im = np.asarray(im)/255 # converts also w,h,c -> h,w,c
+        return im, w, h
+
+    @classmethod
     def __process_for_classification(cls, im_paths, ann_paths, input_size, classes):
         n = len(im_paths)
         m = len(classes)
@@ -139,6 +161,7 @@ class IOProcessor(object):
             assert max(im.size) <= input_size
             # Cast PIL image in numpy array and normalize features between [0,1]
             im = np.asarray(im)/255 # converts also w,h,c -> h,w,c
+            #im, w, h = cls.__process_image(im_paths[k], input_size)
             # Bottom and right zero-padding
             im_array[k, :h, :w, :] = im
             
@@ -158,6 +181,12 @@ class IOProcessor(object):
     def __process_for_segmentation(cls, im_paths, ann_paths, input_size, classes):
         return None, None
 
+    @classmethod
+    def process_image(cls, im_path, input_size):
+        im_array = np.zeros((1, input_size, input_size, 3), dtype="float16")
+        im, w, h = cls.__process_image(im_path, input_size)
+        im_array[:, :h, :w, :] = im
+        return im_array
 
 def draw_bndbox(base, seq):
     name, xmin, xmax, ymin, ymax = seq
@@ -186,7 +215,33 @@ def annotate_image(image, annotation):
         base = draw_bndbox(base, seq)
     return base, desc
 
-def load_data(inputs_path, im, desc):
-    images = np.load(os.path.join(inputs_path, im))
-    descriptions = np.load(os.path.join(inputs_path, desc))
+def load_data(im, desc):
+    images = np.load(im)
+    descriptions = np.load(desc)
     return (images, descriptions)
+
+def load_model(model_name, weights_name):
+    with open(model_name, "r") as architecture:
+        model = model_from_json(architecture.read())
+    model.load_weights(weights_name)
+    return model
+
+def draw_text(base, seq, show=True):
+    # Create image
+    im = Image.new("RGBA", base.size, (255, 255, 255, 0))
+    # Create drawing context
+    d = ImageDraw.Draw(im)
+    # Get a font
+    size=20
+    font = ImageFont.truetype("arial.ttf", size=size)
+    # Create texts
+    x_offset, y_offset = 5, 5
+    for txt in seq:
+        d.text((x_offset, y_offset), txt, font=font, fill=(255, 0, 0, 255))
+        y_offset += (size + 2)
+    # Merge base with the new image
+    out = Image.alpha_composite(base, im)
+    if show:
+        plt.imshow(out)
+        plt.show()
+    return out

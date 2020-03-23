@@ -25,13 +25,12 @@ class Defaults(object):
             "sofa" : 18,
             "train" : 19,
             "tvmonitor" : 20
-        }
-        
+        }      
         cwd = os.getcwd()
         self.ANNOTATIONS_PATH = os.path.join(cwd, r"data\VOCtrainval_11-May-2012\VOCdevkit\VOC2012\Annotations")
         self.IMAGES_PATH = os.path.join(cwd, r"data\VOCtrainval_11-May-2012\VOCdevkit\VOC2012\JPEGImages")
         self.IMAGES_NAMES = os.path.join(cwd, r"data\VOCtrainval_11-May-2012\VOCdevkit\VOC2012\ImageSets\Main\trainval.txt")
         self.OUTPUTS_PATH = os.path.join(cwd, r"data\outputs")
+        self.LOGS_PATH = os.path.join(cwd, r"data\logs")
         self.TASK = "classification"
         self.INPUT_SIZE = 416
-

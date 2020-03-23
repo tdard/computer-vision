@@ -39,7 +39,7 @@ parser.add_argument(
 parser.add_argument(
     "--input_size",
     default=opts.INPUT_SIZE,
-    help="Size of the input images"
+    help="Size of the desired input images"
 )
 
 args = parser.parse_args()
@@ -64,6 +64,7 @@ logger.log("Target images number:", len(names))
 im_paths, ann_paths = PascalVOCExtractor().extract_paths(args.images_path, args.annotations_path, names)
 
 im_array, desc_array = IOProcessor().process(im_paths, ann_paths, args.input_size, args.task, opts.CLASSES)
+logger.success("Processing successful")
 
 # Save images (X) and description (y)
 im_array_name = "images-array-{}-{}.npy".format(args.image_names.split("\\")[-1][:-4], args.input_size) # Platform specific: windows
@@ -77,8 +78,10 @@ logger.log("Description array file name:", desc_array_name)
 logger.log("Description array path:", desc_output)
 
 
-logger.log("Size (in bytes) of the images array to store:", im_array.nbytes)
+logger.log("Size of the images array to store:", "{0:.2f} MB".format(im_array.nbytes/1e6))
 np.save(im_output, im_array)
+logger.success("Storing successful")
 
-logger.log("Size (in bytes) of the descriptions array to store:", desc_array.nbytes)
+logger.log("Size of the descriptions array to store:", "{0:.2f} KB".format(desc_array.nbytes/1e3))
 np.save(desc_output, desc_array)
+logger.success("Storing successful")
