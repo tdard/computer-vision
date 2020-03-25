@@ -1,13 +1,18 @@
-from models import create_logistic_model
+from models import create_logistic_model, create_resnet50
 from config import Defaults
+from utils import load_data, Logger
+
 import tensorflow as tf
-import os
 import numpy as np
 from sklearn.model_selection import train_test_split
-from utils import load_data, Logger
+from azureml.core import Run
+
+import os
 import datetime
 from argparse import ArgumentParser
 
+# Get run context
+run = Run.get_context()
 
 # Get defaults options
 opts = Defaults()
@@ -16,12 +21,12 @@ parser = ArgumentParser()
 
 parser.add_argument(
     "--images_array_path",
-    default="./data/outputs/images-array-trainval-416.npy",
+    default="./data/outputs/images-array-trainval-224.npy",
     help="Name of the .npy file containing images data"
 )
 parser.add_argument(
     "--descriptions_array_path",
-    default="./data/outputs/desc-array-trainval-416.npy",
+    default="./data/outputs/desc-array-trainval-224.npy",
     help="Name of the .npy file containing descriptions data"
 )
 parser.add_argument(
@@ -58,19 +63,30 @@ logger.log("Input shape:", input_shape)
 logger.log("Number of classes:", num_classes)
 
 # Split into training and validation sets
-X_train, X_val, y_train, y_val = train_test_split(images, descriptions, test_size=0.33, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(images, descriptions, test_size=0.33, random_state=42, shuffle=True)
+y_train = y_train.astype("float32")
+y_val = y_val.astype("float32")
+
 logger.success("Data splitted")
+logger.log("X_train shape:", X_train.shape)
+logger.log("X_val shape:", X_val.shape)
+logger.log("y_train shape:", y_train.shape)
+logger.log("y_val shape:", y_val.shape)
 
 # Create model and compile it for training
 model = create_logistic_model(
     input_shape, 
     num_classes
 )
+# model = create_resnet50(
+#     input_shape,
+#     num_classes
+# )
 logger.success("Model created")
 model.compile(
     optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy']
+    loss="binary_crossentropy",
+    metrics=["binary_accuracy", tf.metrics.Precision()]
 )
 logger.success("Model compiled")
 print(model.summary())
@@ -89,7 +105,7 @@ model.fit(
     x=X_train,
     y=y_train,
     batch_size=32,
-    epochs=3,
+    epochs=1,
     validation_data=(X_val, y_val),
     callbacks=[tensorboard_callback]
 )
@@ -97,7 +113,7 @@ model.fit(
 # Save model and weights separately
 model_path = os.path.join(
     args.outputs_path,
-    "logistic_regressor_{}_{}.json".format(input_shape[0], num_classes)
+    "{}_{}_{}.json".format(model.name, input_shape[0], num_classes)
 )
 with open(model_path, "w") as file:
     file.write(model.to_json())
@@ -105,7 +121,7 @@ logger.success("Architecture saved in {}".format(model_path))
 
 weights_path = os.path.join(
     args.outputs_path,
-    "logistic_regressor_{}_{}.h5".format(input_shape[0], num_classes)
+    "{}_{}_{}.h5".format(model.name, input_shape[0], num_classes)
 )
 model.save_weights(weights_path)
 logger.success("Weights saved in {}".format(weights_path))

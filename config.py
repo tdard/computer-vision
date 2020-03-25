@@ -33,4 +33,4 @@ class Defaults(object):
         self.OUTPUTS_PATH = os.path.join(cwd, r"data\outputs")
         self.LOGS_PATH = os.path.join(cwd, r"data\logs")
         self.TASK = "classification"
-        self.INPUT_SIZE = 416
+        self.INPUT_SIZE = 224

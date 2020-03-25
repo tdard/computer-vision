@@ -1,12 +1,13 @@
-import tensorflow as tf
-from tensorflow.keras.models import model_from_json
-from argparse import ArgumentParser
+
 from config import Defaults
 from utils import Logger, IOProcessor, draw_text
+
+from tensorflow.keras.models import model_from_json
 from PIL import Image
 import numpy as np
+
 import os
-import json
+from argparse import ArgumentParser
 
 opts = Defaults()
 
@@ -14,19 +15,19 @@ parser = ArgumentParser()
 
 parser.add_argument(
     "--arch_path",
-    default="./data/outputs/logistic_regressor_416_20.json", 
+    default="./data/outputs/FineTunedResNet50_416_20.json", 
     help="Path to model architecture (.json)"
 )
 parser.add_argument(
     "--weights_path",
-    default="./data/outputs/logistic_regressor_416_20.h5",
+    default="./data/outputs/FineTunedResNet50_416_20.h5",
     help="Path to model weights (.h5)"
 )
 parser.add_argument(
     "--image_path",
     default=os.path.join(
         r"C:\Users\Atlas\Documents\MS Azure\pascal-voc\data\VOCtrainval_11-May-2012\VOCdevkit\VOC2012\JPEGImages", 
-        "2008_000002.jpg"
+        "2008_000003.jpg"
     ),
     help="Path to the image (.jpg) that we want to predict"
 )

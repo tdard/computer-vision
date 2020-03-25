@@ -1,12 +1,13 @@
-import os
-from termcolor import colored
-from xml.etree import ElementTree as ET
 from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
-from random import choice
 import numpy as np
 from progressbar import ProgressBar
 from tensorflow.keras.models import model_from_json
+
+import os
+from termcolor import colored
+from xml.etree import ElementTree as ET
+from random import choice
 
 
 class Logger(object):

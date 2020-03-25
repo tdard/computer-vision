@@ -1,11 +1,12 @@
-import sys
-from argparse import ArgumentParser
-import os
 from utils import Logger, PascalVOCExtractor, AnnotationParser, IOProcessor
 from config import Defaults
+
 from PIL import Image
 import numpy as np
 
+import sys
+from argparse import ArgumentParser
+import os
 
 # Get defaults options
 opts = Defaults()
