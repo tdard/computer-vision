@@ -57,7 +57,7 @@ def create_gpu_target(workspace, name):
         print("Found existing compute target, use it.")
     except ComputeTargetException:
         compute_config = AmlCompute.provisioning_configuration(
-            vm_size="Standard_NC12",
+            vm_size="Standard_NC6", # GPU: Tesla K80 . NC12 has 2 of them
             max_nodes=8)
 
         target = ComputeTarget.create(
@@ -72,14 +72,3 @@ def get_available_vm_sizes_from_config():
     ws = Workspace.from_config()
     vm_sizes = AmlCompute.supported_vmsizes(workspace=ws, location="francecentral")
     return vm_sizes
-
-def recursive_upload(datastore, source):
-    for (dirpath, dirnames, filenames) in os.walk(source):
-        #print(dirpath) # path in which we are. it starts at source
-        #print(dirnames) # directories that we have in dirpath
-        #print(filenames) # only the names of the files that we have in dirpath
-        datastore.upload(
-            src_dir=dirpath, 
-            target_path=dirpath,
-            overwrite=False,
-            show_progress=True)
