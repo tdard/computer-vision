@@ -5,7 +5,6 @@ from azureml.train.estimator import Estimator
 
 import shutil
 
-
 # Get workspace
 ws = Workspace.from_config()
 print("Workspace created")
@@ -23,8 +22,7 @@ script_folder = "remote-preprocess"
 files = [
     "computer-vision/preprocess.py",
     "computer-vision/config.py",
-    "computer-vision/utils.py"#,
-    #"computer-vision/remote/upload_features_and_labels.py"
+    "computer-vision/utils.py",
 ]
 res = copy_files(
     files=files,
@@ -41,15 +39,16 @@ env = create_conda_environment(
     pip_dependencies=["azureml-defaults", "matplotlib", "progressbar2", "Pillow"]
 )
 env.python.conda_dependencies.add_pip_package("azureml-defaults")
+env.python.conda_dependencies.add_pip_package("h5py")
 print("Conda environment '{}' created".format(env_name))
 
 # Create compute target -> It will be Unix I assume
-target_name = "awesome-vm"
+target_name = "awesome-cpu-vm"
 target = create_gpu_target(
     workspace=ws,
     name=target_name
 )
-print("Compute target '{}' created".format(env_name))
+print("Compute target '{}' created".format(target_name))
 
 # Get dataset
 voc = Dataset.get_by_name(
@@ -66,7 +65,7 @@ script_params = {
     "--annotations_path" : "VOCdevkit/VOC2012/Annotations",
     "--images_path" : "VOCdevkit/VOC2012/JPEGImages",
     "--image_names" : "VOCdevkit/VOC2012/ImageSets/Main/trainval.txt",
-    "--outputs_path" : "outputs",
+    "--outputs_path" : "classification",
     "--task" : "classification",
     "--input_size" : 224
 }
@@ -84,29 +83,26 @@ est = Estimator(
 run = exp.submit(est)
 run.wait_for_completion(show_output=True)
 
-# # Get run metrics
-# metrics = run.get_metrics()
+# Upload output files on datastore and dataset
+script_params = {
+    "--subscription_id" : ws.subscription_id,
+    "--resource_group" : ws.resource_group,
+    "--workspace_name" : ws.name,
+    "--h5_path" : "classification/voc_classification_trainval_224.h5",
+    "--outputs_path" : "classification"
+}
+print("Script parameters:", script_params)
 
-# # Upload output files on datastore and dataset
-# script_params = {
-#     "--subscription_id" : ws.subscription_id,
-#     "--resource_group" : ws.resource_group,
-#     "--workspace_name" : ws.name,
-#     "--features_path" : metrics["features_path"],
-#     "--labels_path" : metrics["labels_path"]
-# }
-# print("Script parameters:", script_params)
+est = Estimator(
+    source_directory=script_folder,
+    entry_script="upload_features_and_labels.py",
+    script_params=script_params,
+    compute_target=target,
+    environment_definition=env,
+)
 
-# est = Estimator(
-#     source_directory=script_folder,
-#     entry_script="upload_features_and_labels.py",
-#     script_params=script_params,
-#     compute_target=target,
-#     environment_definition=env,
-# )
-
-# run = exp.submit(est)
-# run.wait_for_completion(show_output=True)
+run = exp.submit(est)
+run.wait_for_completion(show_output=True)
 
 # Remove folder after use (after all we only copy a few python scripts, not huge data)
 print("Attempt to clean following folder:", script_folder)

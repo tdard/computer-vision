@@ -3,15 +3,11 @@ from config import Defaults
 
 from PIL import Image
 import numpy as np
-from azureml.core import Run, Workspace, Dataset
-from azureml.data.datapath import DataPath
+import h5py
 
 import sys
 from argparse import ArgumentParser
 import os
-
-# Get context
-run = Run.get_context(allow_offline=True)
 
 # Get defaults options
 opts = Defaults()
@@ -50,7 +46,7 @@ parser.add_argument(
 parser.add_argument(
     "--outputs_path",
     default=opts.OUTPUTS_PATH,
-    help="Relative or absolute path to the folder containing the outputs of this script"
+    help="Relative path to the folder containing the outputs of this script"
 )
 parser.add_argument(
     "--task",
@@ -96,35 +92,24 @@ images_paths, annotations_paths = PascalVOCExtractor().extract_paths(
 features, labels = IOProcessor().process(images_paths, annotations_paths, args.input_size, args.task, opts.CLASSES)
 logger.success("Processing successful")
 
-# Save features (X) and labels (y)
-if sys.platform.startswith("win"):
-    slash = "\\"
-else:
-    slash = "/"
-features_name = "features-{}-{}.npy".format(args.image_names.split(slash)[-1][:-4], args.input_size) 
-labels_name = "labels-{}-{}-{}.npy".format(args.task, args.image_names.split(slash)[-1][:-4], args.input_size)
+# Save everything in h5!!
+h5_name = "voc_classification_trainval_224.h5"
+h5_path = os.path.join(args.outputs_path, h5_name)
+with h5py.File(h5_path, "w") as file:
+    file.create_dataset("features", data=features, dtype='float32')
+    file.create_dataset("labels", data=labels, dtype='float32')
+logger.success("Created h5 file {} successfully".format(h5_name))
+logger.log("Absolute path of h5 file:", os.path.abspath(h5_path))
 
-features_path = os.path.join(args.outputs_path, features_name)
-labels_path = os.path.join(args.outputs_path, labels_name)
-run.log("features_path", features_path)
-run.log("labels_path", labels_path)
 
-logger.log("Image array file name:", features_name)
-logger.log("Image array path:", features_path)
-logger.log("description array file name:", labels_name)
-logger.log("description array path:", labels_path)
-
-logger.log("Size of the images array to store:", "{0:.2f} MB".format(features.nbytes/1e6))
-np.save(features_path, features)
-logger.success("Temporary save successful")
-
-logger.log("Size of the labels array to store:", "{0:.2f} KB".format(labels.nbytes/1e3))
-np.save(labels_path, labels)
-logger.success("Temporary save successful")
+#### Try to do that on next experiment ####
 
 # Update on datastore if it is not a windows platform
 if not sys.platform.startswith("win"):
     logger.alert("This is not a windows platform, we try to update our features and labels on a datastore")
+
+    from azureml.core import Workspace, Dataset
+    from azureml.data.datapath import DataPath
     # Get workspace
     ws = Workspace(
         subscription_id=args.subscription_id,
@@ -132,24 +117,26 @@ if not sys.platform.startswith("win"):
         workspace_name=args.workspace_name
     )
     files = [
-        features_path, 
-        labels_path
+        h5_path
     ]
     datastore = ws.get_default_datastore()
-    datastore.upload_files(files)
-    logger.success("Files uploaded!")
+    datastore.upload_files(
+        files=files,
+        relative_root=args.outputs_path,
+        target_path=args.outputs_path
+    )
+    logger.success("Files uploaded to '{}' in the datastore".format(args.outputs_path))
 
     # Create dataset and register it
     paths = [
-        DataPath(datastore=datastore, path_on_datastore=features_path),
-        DataPath(datastore=datastore, path_on_datastore=labels_path)
+        DataPath(datastore=datastore, path_on_datastore=h5_path),
     ]
     dataset = Dataset.File.from_files(path=paths)
 
-    ds_name = "Pascal VOC Preprocessed Features and Labels"
+    ds_name = "voc-classification"
     dataset.register(
         workspace=ws,
         name=ds_name,
-        description="Preprocessed features and labels of Pascal VOC 2012: 0-padding, resizing and features normalization"
+        description="Preprocessed features and labels of Pascal VOC 2012: 0-padding, resizing and features normalization on classification task"
     )
     print("File dataset {} registered".format(ds_name))
