@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from progressbar import ProgressBar
 from tensorflow.keras.models import model_from_json
+import h5py
 
 import os
 from termcolor import colored
@@ -216,10 +217,17 @@ def annotate_image(image, annotation):
         base = draw_bndbox(base, seq)
     return base, desc
 
-def load_data(im, desc):
-    images = np.load(im)
-    descriptions = np.load(desc)
-    return (images, descriptions)
+
+def load_data(h5_path):
+    with h5py.File(h5_path, 'r') as file:
+        features = file["features"]
+        labels = file["labels"]
+        X = np.zeros_like(features)
+        y = np.zeros_like(labels)
+        features.read_direct(X)
+        labels.read_direct(y)
+    return (X, y)
+
 
 def load_model(model_name, weights_name):
     with open(model_name, "r") as architecture:

@@ -1,16 +1,17 @@
 from rutils import copy_files, create_conda_environment, create_gpu_target
 
 from azureml.core import Workspace, Experiment, Dataset
-from azureml.train.estimator import Estimator
+from azureml.train.dnn import TensorFlow
 
 import shutil
+
 
 # Get workspace
 ws = Workspace.from_config()
 print("Workspace created")
 
 # Create experiment
-exp_name = "voc-preprocess"
+exp_name = "voc-train"
 exp = Experiment(
     workspace=ws,
     name=exp_name
@@ -18,11 +19,12 @@ exp = Experiment(
 print("Experiment '{}' created".format(exp_name))
 
 # Copy what we need
-script_folder = "remote-preprocess"
+script_folder = "remote-train"
 files = [
-    "computer-vision/preprocess.py",
+    "computer-vision/train.py",
     "computer-vision/config.py",
     "computer-vision/utils.py",
+    "computer-vision/models.py"
 ]
 res = copy_files(
     files=files,
@@ -30,20 +32,8 @@ res = copy_files(
 )
 assert res == True
 
-# Create environment, the one for the project
-env_name = "cv-tensorflow"
-env = create_conda_environment(
-    workspace=ws,
-    name=env_name,
-    conda_dependencies=["tensorflow==2.0", "scikit-learn"],
-    pip_dependencies=["azureml-defaults", "matplotlib", "progressbar2", "Pillow"]
-)
-env.python.conda_dependencies.add_pip_package("azureml-defaults")
-env.python.conda_dependencies.add_pip_package("h5py")
-print("Conda environment '{}' created".format(env_name))
-
 # Create compute target -> It will be Unix I assume
-target_name = "awesome-cpu-vm"
+target_name = "azuresome-gpu"
 target = create_gpu_target(
     workspace=ws,
     name=target_name
@@ -53,30 +43,26 @@ print("Compute target '{}' created".format(target_name))
 # Get dataset
 voc = Dataset.get_by_name(
     workspace=ws,
-    name="Pascal VOC 2012"
+    name="voc-classification"
 )
 
 # Create estimator
 script_params = {
-    "--subscription_id" : ws.subscription_id,
-    "--resource_group" : ws.resource_group,
-    "--workspace_name" : ws.name,
-    "--data_folder" : voc.as_named_input("voc").as_mount(),
-    "--annotations_path" : "VOCdevkit/VOC2012/Annotations",
-    "--images_path" : "VOCdevkit/VOC2012/JPEGImages",
-    "--image_names" : "VOCdevkit/VOC2012/ImageSets/Main/trainval.txt",
+    "--h5_path" : voc.as_named_input("voc_classification").as_download(),
     "--outputs_path" : "classification",
-    "--task" : "classification",
-    "--input_size" : 224
+    "--logs_path" : "logs"
 }
 print("Script parameters:", script_params)
 
-est = Estimator(
+est = TensorFlow(
     source_directory=script_folder,
-    entry_script="preprocess.py",
-    script_params=script_params,
     compute_target=target,
-    environment_definition=env,
+    entry_script="train.py",
+    use_gpu=True,
+    script_params=script_params,
+    framework_version="2.0",
+    conda_packages=["scikit-learn"],
+    pip_packages=["azureml-defaults", "matplotlib", "progressbar2", "Pillow", "h5py"]
 )
 
 # Run experiment

@@ -5,14 +5,11 @@ from utils import load_data, Logger
 import tensorflow as tf
 import numpy as np
 from sklearn.model_selection import train_test_split
-from azureml.core import Run
 
 import os
 import datetime
 from argparse import ArgumentParser
 
-# Get run context
-run = Run.get_context()
 
 # Get defaults options
 opts = Defaults()
@@ -20,14 +17,9 @@ opts = Defaults()
 parser = ArgumentParser()
 
 parser.add_argument(
-    "--images_array_path",
-    default="./data/outputs/images-array-trainval-224.npy",
-    help="Name of the .npy file containing images data"
-)
-parser.add_argument(
-    "--descriptions_array_path",
-    default="./data/outputs/desc-array-trainval-224.npy",
-    help="Name of the .npy file containing descriptions data"
+    "--h5_path",
+    help="Path to features and labels h5 file. Keys: {'features', 'labels'}",
+    default=r"C:\Users\Atlas\Documents\MS Azure\pascal-voc\outputs\voc_classification_trainval_224.h5"
 )
 parser.add_argument(
     "--outputs_path",
@@ -44,8 +36,7 @@ args = parser.parse_args()
 
 Logger.enable_colors()
 logger = Logger("blue")
-logger.log("Images array (.npy) path:", args.images_array_path)
-logger.log("Descriptions array (.npy) path:", args.descriptions_array_path)
+logger.log("Labels & features (.h5) path:", args.h5_path)
 logger.log("Outputs path:", args.outputs_path)
 logger.log("Logs path:", args.logs_path)
 
@@ -53,17 +44,17 @@ logger.log("Logs path:", args.logs_path)
 os.makedirs(args.outputs_path, exist_ok=True)
 
 # Load data
-images, descriptions = load_data(args.images_array_path, args.descriptions_array_path)
+X, y = load_data(args.h5_path)
 logger.success("Data loaded")
 
-input_shape = images.shape[1:] # e.g. 416x416x3
-num_classes = descriptions.shape[-1] # e.g. 20
+input_shape = X.shape[1:] # e.g. 416x416x3
+num_classes = y.shape[-1] # e.g. 20
 
 logger.log("Input shape:", input_shape)
 logger.log("Number of classes:", num_classes)
 
 # Split into training and validation sets
-X_train, X_val, y_train, y_val = train_test_split(images, descriptions, test_size=0.33, random_state=42, shuffle=True)
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.33, random_state=42, shuffle=True)
 y_train = y_train.astype("float32")
 y_val = y_val.astype("float32")
 
@@ -74,14 +65,14 @@ logger.log("y_train shape:", y_train.shape)
 logger.log("y_val shape:", y_val.shape)
 
 # Create model and compile it for training
-model = create_logistic_model(
-    input_shape, 
-    num_classes
-)
-# model = create_resnet50(
-#     input_shape,
+# model = create_logistic_model(
+#     input_shape, 
 #     num_classes
 # )
+model = create_resnet50(
+     input_shape,
+     num_classes
+)
 logger.success("Model created")
 model.compile(
     optimizer='adam',
